@@ -1,0 +1,89 @@
+# Default template for Digi projects
+
+import iBeacon
+import EddystoneBeacon
+import hdc1080
+import ds1621
+
+#2/2/22
+#Maksym Sury
+#Pseudo Code Rendition 1.0
+
+#Function List
+def function_calibration(open,close):
+    Green_LED == ON
+    i=0
+    while(i=0):
+        if(CALIBRATION_BUTTON==ON):
+            i+=1
+            Green_LED == OFF
+
+   Red_LED == ON
+   *log sensor data*
+    # Have an idea of how to do this
+    # Results in know valve position closed
+    # turn_num = Number of 90 degree turns
+    return (0, turn_num)
+
+def store_and_foward():
+    # use the receive transmission code
+    # store message as a string
+    # use transmission code to forward message to next device
+    # look into how Xbee Mesh network code
+
+def check_battery(batt_low):
+    #currently no method found on how xbee can measure battery level
+    # current plans are to a time based battery monitoring system
+    # More study needed
+
+def check_sensors(sensor_operational):
+    #Check if all sensors are in optimal range
+
+
+#Assume Device is ON
+#Begin with calibration
+
+# In order for calibration to be enacted CaL button must be hit withing the first 2-10sec
+# This can be done with a if statement inside inside a while loop
+# The if statement checks for a button press and the while loop runs for 2-10sec
+# Speed of system clock has to be calculated to find number of while loop iterations
+# i = iterative variable
+# j = value to be determined
+
+
+calibration_highend
+calibration_lowend
+
+while(i<j):
+
+    if(CALIBRATION_BUTTON==ON):
+        function_calibration(calibration_highend,calibration_lowend)
+
+    i+=1
+
+
+#Ping neighbouring devices
+# Unclear how or if this is possible at the moment
+
+#Check for incoming data
+
+store_and_foward();
+
+#Check Battery Level
+batt_low=0
+check_battery(batt_low)
+if (batt_low==1):
+    #Generate Error Code
+
+#Check Sensors
+sensor_operational=0
+check_sensors(sensor_operational)
+if (sensor_operational==1):
+    #Generate Error Code
+
+#This completes the calibration of the system.
+#We know the rotational range of the system. A that it starts in the closed position
+
+
+
+print("Hello World!")
