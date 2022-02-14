@@ -16,13 +16,80 @@ def function_calibration(open,close):
     while(i=0):
         if(CALIBRATION_BUTTON==ON):
             i+=1
-            Green_LED == OFF
 
-   Red_LED == ON
-   *log sensor data*
-    # Have an idea of how to do this
-    # Results in know valve position closed
-    # turn_num = Number of 90 degree turns
+    cal_sensor_array_reading = [0,0,0,0] #array reads sensor moment to moment
+    cal_sensor_array_log = [] #where the moment to moment readings are stored
+    cal_sensor_array_reading[0] = S1.read
+    cal_sensor_array_reading[1] = S2.read
+    cal_sensor_array_reading[2] = S3.read
+    cal_sensor_array_reading[3] = S4.read
+    if(S1==HIGH):
+        cal_sensor_array_reading[0] = 1
+
+    if(S2==HIGH):
+        cal_sensor_array_reading[1] = 1
+
+    if (S3 == HIGH):
+        cal_sensor_array_reading[2] = 1
+
+    if (S4 == HIGH):
+        cal_sensor_array_reading[3] = 1
+
+    cal_sensor_array_log.append(cal_sensor_array_reading)
+    Green_LED == OFF
+
+    Red_LED == ON
+    i=0
+    count=0
+    while(i=0):
+        cal_sensor_array_reading[0] = 0
+        cal_sensor_array_reading[1] = 0
+        cal_sensor_array_reading[2] = 0
+        cal_sensor_array_reading[3] = 0
+
+        if (S1 == HIGH):
+            cal_sensor_array_reading[0] = 1
+
+        if (S2 == HIGH):
+            cal_sensor_array_reading[1] = 1
+
+        if (S3 == HIGH):
+            cal_sensor_array_reading[2] = 1
+
+        if (S4 == HIGH):
+            cal_sensor_array_reading[3] = 1
+
+        cal_sensor_array_log.append(cal_sensor_array_reading)
+        count += 1
+        if (CALIBRATION_BUTTON == ON):
+            i += 1
+
+    # Taking the stored sensor data and calculating the number of turns
+    rotation_count=0
+    base = 0
+    base2 = 0
+    for h in range (0,3):
+        if cal_sensor_array_log[0,[h]] == 1:
+            base = h
+    for i in range (1,count):
+        for j in range (0,3):
+            if cal_sensor_array_log[i,[j]]== 1:
+                base2=j
+        if(base==base2):
+            #do nothing
+        else:
+            if((base==(0||3))&&(base2==(0||3))):
+                if (base==3 && base2==0):
+                    rotation_count += 1
+                if (base==0 && base2==3):
+                    rotation_count -= 1
+            else:
+                if (base2>base):
+                    rotation_count += 1
+                if (base>base2):
+                    rotation_count -= 1
+    RED_LED==OFF
+    turn_num = rotation_count # in 90 degree intervals
     return (0, turn_num)
 
 def store_and_foward():
@@ -38,6 +105,17 @@ def check_battery(batt_low):
 
 def check_sensors(sensor_operational):
     #Check if all sensors are in optimal range
+    # return 1 is withing range of operation return 0 is outside of range
+    S1_reading = S1.read
+    S2_reading = S2.read
+    S3_reading = S3.read
+    S4_reading = S4.read
+    if ((0<S1_reading<3.5)&&(0<S2_reading<3.5)&&(0<S3_reading<3.5)&&(0<S4_reading<3.5)):
+        #Do nothing
+        sensor_operational=1
+    else:
+        #Generate error code
+        sensor_operational=0
 
 
 #Assume Device is ON
@@ -60,7 +138,7 @@ while(i<j):
         function_calibration(calibration_highend,calibration_lowend)
 
     i+=1
-
+old_location = calibration_highend
 
 #Ping neighbouring devices
 # Unclear how or if this is possible at the moment
@@ -76,14 +154,69 @@ if (batt_low==1):
     #Generate Error Code
 
 #Check Sensors
-sensor_operational=0
+sensor_operational=1
 check_sensors(sensor_operational)
-if (sensor_operational==1):
+if (sensor_operational==0):
     #Generate Error Code
+    #Will have to be a global variable
+sensor_array_reading = [0, 0, 0, 0]
+sensor_array_log = []
+sensor_array_reading[0] = S1.read
+sensor_array_reading[1] = S2.read
+sensor_array_reading[2] = S3.read
+sensor_array_reading[3] = S4.read
+esc=0
+set_high1=0
+r = 0
+iteration=0
+while (esc=0):
+    for i in (0,3):
+        if (sensor_array_reading[i]=HIGH):
+            set_high2=i
+    sensor_array_log.append(sensor_array_reading)
+    if (set_high1!=set_high2):
+        r=0
+    else:
+        r+=1
+    sensor_array_reading[0] = S1.read
+    sensor_array_reading[1] = S2.read
+    sensor_array_reading[2] = S3.read
+    sensor_array_reading[3] = S4.read
+    set_high1=set_high2
+    if (r== 10000000000): #value equal 2sec
+        esc = 1
+    iteration +=1
 
-#This completes the calibration of the system.
-#We know the rotational range of the system. A that it starts in the closed position
+
+rotation_count=0
+base = 0
+base2 = 0
+for h in range (0,3):
+    if cal_sensor_array_log[0,[h]] == 1:
+        base = h
+for i in range (1,iteration):
+    for j in range (0,3):
+        if cal_sensor_array_log[i,[j]]== 1:
+            base2=j
+    if(base==base2):
+        #do nothing
+    else:
+        if((base==(0||3))&&(base2==(0||3))):
+            if (base==3 && base2==0):
+                rotation_count += 1
+            if (base==0 && base2==3):
+                rotation_count -= 1
+        else:
+            if (base2>base):
+                rotation_count += 1
+            if (base>base2):
+                rotation_count -= 1
+
+# if calibrated then started in closed position. cal_low = 0 and cal_high = number of turns
+new_location = old_location + rotation_count
+
 
 
 
 print("Hello World!")
+
