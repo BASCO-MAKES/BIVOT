@@ -4,118 +4,90 @@ import iBeacon
 import EddystoneBeacon
 import hdc1080
 import ds1621
+import utime
+from umachine import Pin
 
 #2/2/22
 #Maksym Sury
-#Pseudo Code Rendition 1.0
+#Pseudo Code Rendition 2.0
 
 #Function List
-def function_calibration(open,close):
-    Green_LED == ON
+def function_calibration():
+
+    p7 = Pin('D7',Pin.OUT) #initialize DIO11 "GREEN LED"
+    p15 = Pin('D15',Pin.OUT) #initialize DIO5 "RED LED"
+    p11 = Pin('D11',Pin.IN) #Initialize DIO4 "CALIBRATION BUTTON"
+    p7.value(1) #GREEN LED == HIGH
     i=0
-    while(i=0):
-        if(CALIBRATION_BUTTON==ON):
-            i+=1
+    while i==0:
+       i = p11.value()
 
     cal_sensor_array_reading = [0,0,0,0] #array reads sensor moment to moment
     cal_sensor_array_log = [] #where the moment to moment readings are stored
-    cal_sensor_array_reading[0] = S1.read
-    cal_sensor_array_reading[1] = S2.read
-    cal_sensor_array_reading[2] = S3.read
-    cal_sensor_array_reading[3] = S4.read
-    if(S1==HIGH):
-        cal_sensor_array_reading[0] = 1
 
-    if(S2==HIGH):
-        cal_sensor_array_reading[1] = 1
+    p7.value(0) #GREEN LED == LOW
+    p15.value(1) #RED LED == HIGH
+    p19 = Pin('D19', Pin.IN)  # Initialize DIO1 Sensor "H0"
+    p18 = Pin('D18', Pin.IN)  # Initialize DIO2 Sensor "H1"
+    p17 = Pin('D17', Pin.IN)  # Initialize DIO3 Sensor "H2"
+    p16 = Pin('D16', Pin.IN)  # Initialize DIO6 Sensor "H3"
 
-    if (S3 == HIGH):
-        cal_sensor_array_reading[2] = 1
-
-    if (S4 == HIGH):
-        cal_sensor_array_reading[3] = 1
-
-    cal_sensor_array_log.append(cal_sensor_array_reading)
-    Green_LED == OFF
-
-    Red_LED == ON
     i=0
     count=0
-    while(i=0):
-        cal_sensor_array_reading[0] = 0
-        cal_sensor_array_reading[1] = 0
-        cal_sensor_array_reading[2] = 0
-        cal_sensor_array_reading[3] = 0
-
-        if (S1 == HIGH):
-            cal_sensor_array_reading[0] = 1
-
-        if (S2 == HIGH):
-            cal_sensor_array_reading[1] = 1
-
-        if (S3 == HIGH):
-            cal_sensor_array_reading[2] = 1
-
-        if (S4 == HIGH):
-            cal_sensor_array_reading[3] = 1
+    while i==0:
+        cal_sensor_array_reading[0] = p19.value()#Reads Sensor "H0"
+        cal_sensor_array_reading[1] = p18.value()#Reads Sensor "H1"
+        cal_sensor_array_reading[2] = p17.value()#Reads Sensor "H2"
+        cal_sensor_array_reading[3] = p16.value()#Reads Sensor "H3"
 
         cal_sensor_array_log.append(cal_sensor_array_reading)
         count += 1
-        if (CALIBRATION_BUTTON == ON):
-            i += 1
+        i = p11.value()#Calibration button hit
+
 
     # Taking the stored sensor data and calculating the number of turns
     rotation_count=0
-    base = 0
+    base1 = 0
     base2 = 0
     for h in range (0,3):
         if cal_sensor_array_log[0,[h]] == 1:
-            base = h
+            base1 = h
     for i in range (1,count):
         for j in range (0,3):
             if cal_sensor_array_log[i,[j]]== 1:
                 base2=j
-        if(base==base2):
-            #do nothing
-        else:
-            if((base==(0||3))&&(base2==(0||3))):
-                if (base==3 && base2==0):
+        if base1!=base2:
+            if base1==3 & base2==0:
                     rotation_count += 1
-                if (base==0 && base2==3):
+            elif base1==0 & base2==3:
                     rotation_count -= 1
             else:
-                if (base2>base):
+                if base2>base1:
                     rotation_count += 1
-                if (base>base2):
+                if base1>base2:
                     rotation_count -= 1
-    RED_LED==OFF
+        base1=base2
+
+    p15.value(1) #RED LED == LOW
     turn_num = rotation_count # in 90 degree intervals
-    return (0, turn_num)
+    return (turn_num)
 
 def store_and_foward():
+    x=1
     # use the receive transmission code
     # store message as a string
     # use transmission code to forward message to next device
     # look into how Xbee Mesh network code
 
 def check_battery(batt_low):
+    x=1
     #currently no method found on how xbee can measure battery level
     # current plans are to a time based battery monitoring system
     # More study needed
 
-def check_sensors(sensor_operational):
-    #Check if all sensors are in optimal range
-    # return 1 is withing range of operation return 0 is outside of range
-    S1_reading = S1.read
-    S2_reading = S2.read
-    S3_reading = S3.read
-    S4_reading = S4.read
-    if ((0<S1_reading<3.5)&&(0<S2_reading<3.5)&&(0<S3_reading<3.5)&&(0<S4_reading<3.5)):
-        #Do nothing
-        sensor_operational=1
-    else:
-        #Generate error code
-        sensor_operational=0
+def get_pin(p):
+    out = p.value()
+
 
 
 #Assume Device is ON
@@ -128,17 +100,24 @@ def check_sensors(sensor_operational):
 # i = iterative variable
 # j = value to be determined
 
+p7 = Pin('D7',Pin.OUT) #initialize DIO11 "GREEN LED"
+p15 = Pin('D15',Pin.OUT) #initialize DIO5 "RED LED"
+p11 = Pin('D11',Pin.IN) #Initialize DIO4 "CALIBRATION BUTTON"
+p19 = Pin('D19', Pin.IN)  # Initialize DIO1 Sensor "H0"
+p18 = Pin('D18', Pin.IN)  # Initialize DIO2 Sensor "H1"
+p17 = Pin('D17', Pin.IN)  # Initialize DIO3 Sensor "H2"
+p16 = Pin('D16', Pin.IN)  # Initialize DIO6 Sensor "H3"
 
-calibration_highend
-calibration_lowend
+#Time delayed of 10sec when calibration mode can be entered.
+t1 = utime.ticks_ms()
+t2 = utime.ticks_ms()
+while(t2-t1)<=10000:
+    #enter
+    t2 = utime.ticks_ms()
+    if p11.value()==1: #Calibration button hit
+        turn_num=function_calibration()
 
-while(i<j):
 
-    if(CALIBRATION_BUTTON==ON):
-        function_calibration(calibration_highend,calibration_lowend)
-
-    i+=1
-old_location = calibration_highend
 
 #Ping neighbouring devices
 # Unclear how or if this is possible at the moment
@@ -151,40 +130,48 @@ store_and_foward();
 batt_low=0
 check_battery(batt_low)
 if (batt_low==1):
-    #Generate Error Code
+    # Generate Error Code
 
 #Check Sensors
-sensor_operational=1
-check_sensors(sensor_operational)
-if (sensor_operational==0):
-    #Generate Error Code
+S1_reading = p19.value()  # Reads Sensor "H0"
+S2_reading = p18.value()  # Reads Sensor "H1"
+S3_reading = p17.value()  # Reads Sensor "H2"
+S4_reading = p16.value()  # Reads Sensor "H3"
+if ((0 < S1_reading < 3.5) & (0 < S2_reading < 3.5) & (0 < S3_reading < 3.5) & (0 < S4_reading < 3.5)):
+    # Do nothing
+    sensor_operational = 1
+else:
+    # Generate error code
+    sensor_operational = 0
     #Will have to be a global variable
+
+
 sensor_array_reading = [0, 0, 0, 0]
 sensor_array_log = []
-sensor_array_reading[0] = S1.read
-sensor_array_reading[1] = S2.read
-sensor_array_reading[2] = S3.read
-sensor_array_reading[3] = S4.read
+sensor_array_reading[0] = p19.value()  # Reads Sensor "H0"
+sensor_array_reading[1] = p18.value()  # Reads Sensor "H1"
+sensor_array_reading[2] = p17.value()  # Reads Sensor "H2"
+sensor_array_reading[3] = p16.value()  # Reads Sensor "H3"
 esc=0
 set_high1=0
-r = 0
 iteration=0
-while (esc=0):
+t1 = utime.ticks_ms()
+t2 = utime.ticks_ms()
+while(t2-t1)<=2000:
     for i in (0,3):
-        if (sensor_array_reading[i]=HIGH):
+        if sensor_array_reading[i]==1:
             set_high2=i
     sensor_array_log.append(sensor_array_reading)
     if (set_high1!=set_high2):
-        r=0
+        t1 = utime.ticks_ms()
+        t2 = utime.ticks_ms()
     else:
-        r+=1
-    sensor_array_reading[0] = S1.read
-    sensor_array_reading[1] = S2.read
-    sensor_array_reading[2] = S3.read
-    sensor_array_reading[3] = S4.read
+        t2 = utime.ticks_ms()
+    sensor_array_reading[0] = p19.value()  # Reads Sensor "H0"
+    sensor_array_reading[1] = p18.value()  # Reads Sensor "H1"
+    sensor_array_reading[2] = p17.value()  # Reads Sensor "H2"
+    sensor_array_reading[3] = p16.value()  # Reads Sensor "H3"
     set_high1=set_high2
-    if (r== 10000000000): #value equal 2sec
-        esc = 1
     iteration +=1
 
 
@@ -192,24 +179,24 @@ rotation_count=0
 base = 0
 base2 = 0
 for h in range (0,3):
-    if cal_sensor_array_log[0,[h]] == 1:
+    if sensor_array_log[0,[h]] == 1:
         base = h
 for i in range (1,iteration):
     for j in range (0,3):
-        if cal_sensor_array_log[i,[j]]== 1:
+        if sensor_array_log[i,[j]]== 1:
             base2=j
-    if(base==base2):
+    if base==base2:
         #do nothing
     else:
-        if((base==(0||3))&&(base2==(0||3))):
-            if (base==3 && base2==0):
+        if (base == (0 | 3))&(base2 == (0 | 3)):
+            if base==3 & base2==0:
                 rotation_count += 1
-            if (base==0 && base2==3):
+            if base==0 & base2==3:
                 rotation_count -= 1
         else:
-            if (base2>base):
+            if base2>base:
                 rotation_count += 1
-            if (base>base2):
+            if base>base2:
                 rotation_count -= 1
 
 # if calibrated then started in closed position. cal_low = 0 and cal_high = number of turns
@@ -219,4 +206,3 @@ new_location = old_location + rotation_count
 
 
 print("Hello World!")
-
