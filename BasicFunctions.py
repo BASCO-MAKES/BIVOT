@@ -27,6 +27,9 @@ def analog_in(pin = 'D1',samples = 10,wait = 5): #returns the analog input at 'p
 def digital_in(pin = 'D0'): #returns the digital input at 'pin'
 	p = Pin(pin,Pin.IN)
 	return p.value()
+def CopyFile(f1,f2):
+	for line in f1:
+		f2.write(line)
 
 
 
