@@ -1,0 +1,266 @@
+# Default template for Digi projects
+
+import iBeacon
+import EddystoneBeacon
+import hdc1080
+import ds1621
+import utime
+import time
+import xbee
+from umachine import Pin
+from machine import ADC
+
+
+# 3/2/22
+# Maksym Sury
+# 90 Degree Turn Valve v1.0
+
+# function list
+
+def function_calibration ():
+    # CALB BUTTON Pressed Enter Calibration Mode
+    # Begin by initializing pins for LEDs
+    p7 = Pin('D7',Pin.OUT) # Initialize DIO11 "GREEN LED"
+    p13 = Pin('D13',Pin.OUT) # Initialize DIO9 "RED LED"
+    p11 = Pin('D11',Pin.IN) # Initialize DIO4 "CALIBRATION BUTTON"
+    p7.value(1) # GREEN LED == HIGH
+    # Initialize Sensor Array. Since it is 90 Degree two of the pins will be constant HIGH
+    p19 = Pin('D19', Pin.IN)  # Initialize DIO1 Sensor "H0"
+    p18 = Pin('D18', Pin.IN)  # Initialize DIO2 Sensor "H1"
+    p17 = Pin('D17', Pin.IN)  # Initialize DIO3 Sensor "H2"
+    p16 = Pin('D16', Pin.IN)  # Initialize DIO6 Sensor "H3"
+    # To ensure USER is still not pressing the CALB button
+    while p11.value():
+        i = 0
+    # Set up Sensor Check Variable
+    # These are part of the previous CHECK SENSOR function
+    # It checks if the sensors are operation by checking if they ever go active HIGH
+    # Since two sensors on the 90 Degree will always be ON those will pass the test unless they are malfunctioning
+    # Since the calibration function takes the VALVE through both OPEN and CLOSED states
+    # Both sensor should go HIGH at some point
+    # If not all sensor are detected program will throw ERROR code
+    H_CLEAR = [0,0,0,0]
+    # Set up array to store sensor data at OPEN and CLOSED
+    H_OPEN = [0,0,0,0]
+    H_CLOSED = [0, 0, 0, 0]
+    # Flag variable when there is an ERROR detected
+    # ERROR CODE LIST
+    # 0 = NO ERRORS
+    # 1 = BOTH H3 & H0 ACTIVE HIGH/LOW AT SAME TIME
+    # 2 = SENORS DID NOT PASS SENSOR CHECK
+    ERROR_CODE = 0
+    # USER prompted to place valve in start position of OPEN
+    # When VALVE is in OPEN state USER will press CALB to continue calibration
+    i=0
+    while i == 0:
+        if p11.value() == 1:  # Calibration button hit
+            i = 1
+    # Since VALVE is OPEN we can look for which sensor is low and find the closed state
+    # H1 and H2 will always be HIGH so we just look for which sensor is low
+    # Capture senor reading at OPEN state
+    H_OPEN[0] = p19.value()  # Reads Sensor "H0"
+    H_OPEN[1] = p18.value()  # Reads Sensor "H1"
+    H_OPEN[2] = p17.value()  # Reads Sensor "H2"
+    H_OPEN[3] = p16.value()  # Reads Sensor "H3"
+    # Checks which sensors are HIGH and adds them to H_CLEAR to have them pass sensor check
+    for i in range(3):
+        if H_OPEN[i] == 1:
+            H_CLEAR[i] = 1
+    # Checks which sensor is HIGH between H0/H3 to see which one is the OPEN sensor
+    OPEN_SENSOR=0
+    # If statement checks if H3 & H0 are ON at the same time or OFF
+    # If they are this is an ERROR and a ERROR code will be generate
+    if (H_OPEN[0] == 1 & H_OPEN[3]==1)|(H_OPEN[0] == 0 & H_OPEN[3]==0):
+        ERROR_CODE = 1
+    else:
+        for i in range(3):
+            if H_OPEN[i] == 0:
+                OPEN_SENSOR = i
+    # VALVE in OPEN state and USER has pressed CALB to enter second stage of calibration
+    p7.value(0)  # GREEN LED == LOW
+    p13.value(1)  # RED LED == HIGH
+    # While loop waits for CALB button to be presses
+    while i == 0:
+        i = p11.value() # Calibration button hit
+    # Capture senor reading at CLOSED state
+    H_CLOSED[0] = p19.value()  # Reads Sensor "H0"
+    H_CLOSED[1] = p18.value()  # Reads Sensor "H1"
+    H_CLOSED[2] = p17.value()  # Reads Sensor "H2"
+    H_CLOSED[3] = p16.value()  # Reads Sensor "H3"
+    # Checks which sensors are HIGH and adds them to H_CLEAR to have them pass sensor check
+    for i in range(3):
+        if H_CLOSED[i] == 1:
+            H_CLEAR[i] = 1
+    CLOSED_SENSOR = 0
+    # If statement checks if H3 & H0 are ON at the same time or OFF
+    # If they are this is an ERROR and a ERROR code will be generate
+    if (H_CLOSED[0] == 1 & H_CLOSED[3] == 1) | (H_CLOSED[0] == 0 & H_CLOSED[3] == 0):
+        ERROR_CODE = 1
+    else:
+        for i in range(3):
+            if H_CLOSED[i] == 0:
+                CLOSED_SENSOR = i
+    # This part checks if all the sensors were active at some point and passed sensor check
+    for i in range(3):
+        if H_CLEAR[i] == 0:
+            ERROR_CODE = 2
+    # Since we logged the log sensor at OPEN & CLOSED we need to switch their values
+    p13.value(0)  # RED LED == LOW
+    TEMP_VAR = CLOSED_SENSOR
+    CLOSED_SENSOR = OPEN_SENSOR
+    OPEN_SENSOR = TEMP_VAR
+    # At the end of calibration we should know which sensor is HIGH on OPEN & CLOSED and if there are any ERRORS
+    return OPEN_SENSOR, CLOSED_SENSOR, ERROR_CODE
+
+def check_battery():
+    # This is ADC POLLING code taken from gitHub
+    # NEEDs tp be tested seprately and tweaked
+    # Pin D0 (AD0/DIO0)
+    ADC_PIN_ID = "D0"
+    # ADC reference voltage
+    AV_VALUES = {0: 1.25, 1: 2.5, 2: 3.3, None: 2.5}
+    # Read the module's Analog Digital Reference
+    try:
+        av = xbee.atcmd("AV")
+    except KeyError:
+        # Reference is set to 2.5 V on XBee 3 Cellular
+        av = None
+    reference = AV_VALUES[av]
+    print("Configured Analog Digital Reference: AV:{}, {} V".format(av, reference))
+    # Create an ADC object for pin DIO0/AD0.
+    adc_pin = ADC(ADC_PIN_ID)
+    # Start reading the analog voltage value present at the pin.
+    while True:
+        value = adc_pin.read()
+        print("- ADC value:", value)
+        print("- Analog voltage [V]:", value * reference / 4095)
+        time.sleep(1)
+
+    # Alternatively this is ASWIN's code unknown if reliable
+    battery = xbee.atcmd("%V")
+    # Returns battery voltage in mV
+    if battery < 2500:
+        BATTERY_WARNING = 0
+    else:
+        BATTERY_WARNING = 1
+
+    # Second Alternative MAX's Code
+    # Reads ADC pin off voltage divider
+    p0 = ADC('D0')
+    battery = p0.read()
+    # Calculate reference voltage before hand
+    vref = 0.1
+    battery = (battery * vref) / 4095
+    if battery < 2500:
+        BATTERY_WARNING = 0
+    else:
+        BATTERY_WARNING = 1
+
+    return BATTERY_WARNING
+
+def transmission(msg):
+
+    p7 = Pin('D7', Pin.OUT)  # Initialize DIO11 "GREEN LED"
+    p15 = Pin('D15', Pin.OUT)  # Initialize DI05 "YELLOW LED
+    p13 = Pin('D13', Pin.OUT)  # Initialize DIO9 "RED LED"
+    # TODO: replace with the 64-bit address of your target device.
+    TARGET_64BIT_ADDR = b'\x00\x13\xA2\x00\x41\xE4\x76\xF9'
+    # 0013A20041E4E09A
+    MESSAGE = msg
+    #YELLOW LED ON to indicate message being transmit
+    p15.value(1)
+    try:
+        xbee.transmit(TARGET_64BIT_ADDR, MESSAGE)
+        # YELLOW LED OFF & GREEN LED ON to signify successful transmission
+        p15.value(0)
+        p7.value(1)
+    except Exception as e:
+        # YELLOW LED OFF & RED LED ON to signify successful transmission
+        p15.value(0)
+        p13.value(1)
+    # half second delay to ensure user sees LED  feedback
+    t1 = utime.ticks_ms()
+    t2 = utime.ticks_ms()
+    while (t2 - t1) <= 500:
+        # enter
+        t2 = utime.ticks_ms()
+    p15.value(0)
+    p7.value(0)
+    p13.value(0)
+    return 1
+
+# START OF MAIN
+BIVOT_ID = 'B001'
+# Initialize Buttons and LEDs
+p7 = Pin('D7', Pin.OUT)  # Initialize DIO11 "GREEN LED"
+p15 = Pin('D15', Pin.OUT)  # Initialize DI05 "YELLOW LED
+p13 = Pin('D13', Pin.OUT)  # Initialize DIO9 "RED LED"
+p11 = Pin('D11', Pin.IN)  # Initialize DIO4 "CALIBRATION BUTTON"
+# Initialize Sensor Array. Since it is 90 Degree two of the pins will be constant HIGH
+p19 = Pin('D19', Pin.IN)  # Initialize DIO1 Sensor "H0"
+p18 = Pin('D18', Pin.IN)  # Initialize DIO2 Sensor "H1"
+p17 = Pin('D17', Pin.IN)  # Initialize DIO3 Sensor "H2"
+p16 = Pin('D16', Pin.IN)  # Initialize DIO6 Sensor "H3"
+# For this iteration if the device is just powered on or is reset the program will always begin in calibration
+# Need to look into how to store data that will be saved apon reselt.
+# Maybe flash a text file with data before transmission. if result put initial conditions from text file
+calibration_results = function_calibration()
+# Results of sensor check
+SENSOR_ERROR = calibration_results[2]
+# Current position of valve after calibration should always be CLOSED
+CURRENT_POS = calibration_results[1]
+# Which sensor is high in OPEN state
+OPEN_STATE = calibration_results[0]
+# Which sensor is high in CLOSED state
+CLOSED_STATE = calibration_results[1]
+# List of Sensor ERROR Codes
+SENSOR_ERROR_CODES = ['NO ERRORS', 'BOTH H3 & H0 ACTIVE HIGH/LOW AT SAME TIME', 'NOT ALL SENSORS PASSED SENSOR CHECK']
+# List of Battery ERROR Codes
+BATTERY_ERROR_CODE = ['BATTERY>25%', 'BATTERY<25%']
+#List of current sensor readings
+H_CURRENT = [0, 0, 0, 0]
+STATE = ''
+while 1:
+    if p11.value() == 1:
+        calibration_results = function_calibration()
+        # Results of sensor check
+        SENSOR_ERROR = calibration_results[2]
+        # Current position of valve after calibration should always be CLOSED
+        CURRENT_POS = calibration_results[1]
+        # Which sensor is high in OPEN state
+        OPEN_STATE = calibration_results[0]
+        # Which sensor is high in CLOSED state
+        CLOSED_STATE = calibration_results[1]
+    # Results of Check Battery
+    battery_error = check_battery()
+    BATTERY_ERROR_MSG = BATTERY_ERROR_CODE[battery_error]
+    # This part is the actual reading of the sensors when it is stationary or in movement
+    i = 0
+    while i < 1000:
+        H_CURRENT[0] = p19.value()  # Reads Sensor "H0"
+        H_CURRENT[1] = p18.value()  # Reads Sensor "H1"
+        H_CURRENT[2] = p17.value()  # Reads Sensor "H2"
+        H_CURRENT[3] = p16.value()  # Reads Sensor "H3"
+        # If last know position does not match current position
+        if H_CURRENT[CURRENT_POS] != 1:
+            if H_CURRENT[CLOSED_STATE] == 1:
+                CURRENT_POS = CLOSED_STATE
+                STATE = 'CLOSED' 
+                i += 100
+            if H_CURRENT[OPEN_STATE] == 1:
+                CURRENT_POS = OPEN_STATE
+                STATE = 'OPEN'
+                i += 100
+            if H_CURRENT[0] == 0 & H_CURRENT[3] == 0:
+                STATE = 'MOVING'
+                i += 100
+        else:
+            if CURRENT_POS == OPEN_STATE:
+                STATE = 'OPEN'
+                i = 1000
+            if CURRENT_POS == CLOSED_STATE:
+                STATE = 'CLOSED'
+                i = 1000
+        
+    message = ' ID: ' + str(BIVOT_ID) + ', STATUS: ' + str(STATE) + ', ' + str(BATTERY_ERROR_MSG) + ', SENSOR STATUS: ' + str(SENSOR_ERROR_CODES)
+    transmission(message)
