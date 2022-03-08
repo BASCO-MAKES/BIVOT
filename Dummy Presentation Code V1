@@ -1,0 +1,45 @@
+# Default template for Digi projects
+
+import utime
+import time
+import xbee
+from machine import Pin
+from machine import ADC
+
+# 3/2/22
+# Maksym Sury
+# 90 Degree Turn Valve v1.0
+
+# function list
+# CALB BUTTON Pressed Enter Calibration Mode
+# Begin by initializing pins for LEDs
+# p11 = Pin('D11', Pin.OUT)  # Initialize DIO11 "GREEN LED"
+p05 = Pin.board.D5  # YELLOW
+p05.mode(Pin.OUT)
+p05.on()
+p10 = Pin.board.D10  # RED
+p10.mode(Pin.OUT)
+p10.value(1)
+p09 = Pin.board.D9  # GREEN
+p09.mode(Pin.OUT)
+p09.value(1)
+p4 = Pin('D4', Pin.IN)  # Initialize DIO4 "CALIBRATION BUTTON"
+# Initialize Sensor Array. Since it is 90 Degree two of the pins will be constant HIGH
+p01 = Pin('D1', Pin.IN)  # Initialize DIO1 Sensor "H0"
+p02 = Pin('D2', Pin.IN)  # Initialize DIO2 Sensor "H1"
+p03 = Pin('D3', Pin.IN)  # Initialize DIO3 Sensor "H2"
+p06 = Pin('D6', Pin.IN)  # Initialize DIO6 Sensor "H3"
+# To ensure USER is still not pressing the CALB button
+while 1:
+    if p4.value() == 0:
+        p10.on()
+        p05.on()
+        p09.on()
+    if p01.value() == 1:
+        p10.on()
+        p05.off()
+        p09.off()
+    if p06.value() == 1:
+        p10.off()
+        p05.off()
+        p09.on()

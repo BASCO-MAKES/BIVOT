@@ -1,0 +1,197 @@
+# Default template for Digi projects
+
+import utime
+import time
+import xbee
+from umachine import Pin
+from machine import ADC
+import i2c
+
+# 3/2/22
+# Maksym Sury
+# 90 Degree Turn Valve v1.0
+
+# function list
+
+def function_calibration():
+    # CALB BUTTON Pressed Enter Calibration Mode
+    # Begin by initializing pins for LEDs
+    # p11 = Pin('D11', Pin.OUT)  # Initialize DIO11 "GREEN LED" FALSE
+    # This is the way to properly set output pins
+    
+    # RED LED
+    p10 = Pin.board.D10
+    p10.mode(Pin.OUT)
+    p10.value(1)
+    
+    # YELLOW LED            A SPECIAL PIN THAT MUST ALWAYS BE CALLED
+    p05 = Pin.board.D5  # Specify PIN based on DIO map
+    p05.mode(Pin.OUT)   # Specify INPUT/OUTPUT
+    p05.on()    # Specify value
+    
+    # GREEN LED
+    p09 = Pin.board.D9  
+    p09.mode(Pin.OUT)
+    p09.value(1)
+    
+    p04 = Pin('D4', Pin.IN)  # Initialize DIO4 "CALIBRATION BUTTON"
+    # Initialize Sensor Array. Since it is 90 Degree two of the pins will be constant HIGH
+    p01 = Pin('D1', Pin.IN)  # Initialize DIO1 Sensor "H0"
+    p02 = Pin('D2', Pin.IN)  # Initialize DIO2 Sensor "H1"
+    p03 = Pin('D3', Pin.IN)  # Initialize DIO3 Sensor "H2"
+    p06 = Pin('D6', Pin.IN)  # Initialize DIO6 Sensor "H3"
+
+    # To ensure USER is still not pressing the CALB button
+    # Set up Sensor Check Variable
+    # These are part of the previous CHECK SENSOR function
+    # It checks if the sensors are operation by checking if they ever go active HIGH
+    # Since two sensors on the 90 Degree will always be ON those will pass the test unless they are malfunctioning
+    # Since the calibration function takes the VALVE through both OPEN and CLOSED states
+    # Both sensor should go HIGH at some point
+    # If not all sensor are detected program will throw ERROR code
+    H_CLEAR = [0, 0, 0, 0]
+    # Set up array to store sensor data at OPEN and CLOSED
+    H_OPEN = [0, 0, 0, 0]
+    H_CLOSED = [0, 0, 0, 0]
+    # Flag variable when there is an ERROR detected
+    # ERROR CODE LIST
+    # 0 = NO ERRORS
+    # 1 = BOTH H3 & H0 ACTIVE HIGH/LOW AT SAME TIME
+    # 2 = SENORS DID NOT PASS SENSOR CHECK
+    ERROR_CODE = 0
+    
+    # USER prompted to place valve in start position of OPEN
+    # When VALVE is in OPEN state USER will press CALB to continue calibration
+    t1 = utime.ticks_ms()
+    t2 = utime.ticks_ms()
+    # AFTER 1sec LED SET TO OFF
+    while (t2 - t1) <= 1000:
+        # enter
+        t2 = utime.ticks_ms()
+        
+    p10.value(0)    # RED OFF
+    p05.value(0)    # YELLOW OFF
+    p09.value(1)    # GREEN OFF
+    
+    # WAIT FOR CALB
+    i = 0
+    while i == 0:
+        if p04.value() == 0:  # Calibration button hit
+            i = 1
+    
+    t1 = utime.ticks_ms()
+    t2 = utime.ticks_ms()
+    while (t2 - t1) <= 1000:
+        # enter
+        t2 = utime.ticks_ms()
+        
+    # Since VALVE is OPEN we can look for which sensor is low and find the closed state
+    # H1 and H2 will always be HIGH so we just look for which sensor is low
+    # Capture senor reading at OPEN state
+    H_OPEN[0] = p01.value()  # Reads Sensor "H0"
+    H_OPEN[1] = p02.value()  # Reads Sensor "H1"
+    H_OPEN[1] = 1
+    H_OPEN[2] = p03.value()  # Reads Sensor "H2"
+    H_OPEN[2] = 1
+    H_OPEN[3] = p06.value()  # Reads Sensor "H3"
+    
+    # Checks which sensors are HIGH and adds them to H_CLEAR to have them pass sensor check
+    for i in range(3):
+        if H_OPEN[i] == 1:
+            H_CLEAR[i] = 1
+    # Checks which sensor is HIGH between H0/H3 to see which one is the OPEN sensor
+    OPEN_SENSOR = 0
+    # If statement checks if H3 & H0 are ON at the same time or OFF
+    # If they are this is an ERROR and a ERROR code will be generate
+    if (H_OPEN[0] == 1 & H_OPEN[3] == 1) | (H_OPEN[0] == 0 & H_OPEN[3] == 0):
+        ERROR_CODE = 1
+    else:
+        for i in range(3):
+            if H_OPEN[i] == 0:
+                OPEN_SENSOR = i
+    
+    # VALVE in OPEN state and USER has pressed CALB to enter second stage of calibration
+    p09.value(0)  # GREEN LED == LOW
+    p10.value(1)  # RED LED == HIGH
+    
+    # While loop waits for CALB button to be presses
+    i = 0
+    while i == 0:
+        if p04.value() == 0:  # Calibration button hit
+            i = 1
+    # Capture senor reading at CLOSED state
+    H_CLOSED[0] = p01.value()  # Reads Sensor "H0"
+    H_CLOSED[1] = p02.value()  # Reads Sensor "H1"
+    H_CLOSED[1] = 1
+    H_CLOSED[2] = p03.value()  # Reads Sensor "H2"
+    H_CLOSED[2] = 1
+    H_CLOSED[3] = p06.value()  # Reads Sensor "H3"
+    # Checks which sensors are HIGH and adds them to H_CLEAR to have them pass sensor check
+    for i in range(3):
+        if H_CLOSED[i] == 1:
+            H_CLEAR[i] = 1
+    CLOSED_SENSOR = 0
+    # If statement checks if H3 & H0 are ON at the same time or OFF
+    # If they are this is an ERROR and a ERROR code will be generate
+    if (H_CLOSED[0] == 1 & H_CLOSED[3] == 1) | (H_CLOSED[0] == 0 & H_CLOSED[3] == 0):
+        ERROR_CODE = 1
+    else:
+        for i in range(3):
+            if H_CLOSED[i] == 0:
+                CLOSED_SENSOR = i
+    # This part checks if all the sensors were active at some point and passed sensor check
+    for i in range(3):
+        if H_CLEAR[i] == 0:
+            ERROR_CODE = 2
+    # Since we logged the log sensor at OPEN & CLOSED we need to switch their values
+    p10.value(0)  # RED LED == LOW
+    TEMP_VAR = CLOSED_SENSOR
+    CLOSED_SENSOR = OPEN_SENSOR
+    OPEN_SENSOR = TEMP_VAR
+    # At the end of calibration we should know which sensor is HIGH on OPEN & CLOSED and if there are any ERRORS
+    print(str(OPEN_SENSOR))
+    print(str(CLOSED_SENSOR))
+    print(str(ERROR_CODE))
+   
+    for i in range(5):
+        t1 = utime.ticks_ms()
+        t2 = utime.ticks_ms()
+        while (t2 - t1) <= 250:
+            # enter
+            t2 = utime.ticks_ms()
+        p09.value(1)
+        p05.value(1)
+        p10.value(1)
+        t1 = utime.ticks_ms()
+        t2 = utime.ticks_ms()
+        while (t2 - t1) <= 250:
+            # enter
+            t2 = utime.ticks_ms()
+        p09.value(0)
+        p05.value(0)
+        p10.value(0)
+
+    return OPEN_SENSOR, CLOSED_SENSOR, ERROR_CODE
+
+
+while True:
+    results = function_calibration()
+    print(str(results))
+    # TODO: replace with the 64-bit address of your target device.
+    TARGET_64BIT_ADDR = b'\x00\x13\xA2\x00\x41\xE3\x79\xAC'
+    # 0013A20041E4E09A
+    print('Enter your message:')
+    MESSAGE = str(results)
+
+    print(" +---------------------------------------+")
+    print(" | XBee MicroPython Transmit Data Sample |")
+    print(" +---------------------------------------+\n")
+
+    print("Sending data to %s >> %s" % (''.join('{:02x}'.format(x).upper() for x in TARGET_64BIT_ADDR),
+                                        MESSAGE))
+
+    try:
+        xbee.transmit(TARGET_64BIT_ADDR, MESSAGE)
+        print("Data sent successfully")
+    except Exception as e:
+        print("Transmit failure: %s" % str(e))
