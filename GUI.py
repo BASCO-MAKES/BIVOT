@@ -1,7 +1,7 @@
 import tkinter as tk
 import time,serial,threading
 
-def timer():
+def ReadSerial():
 	p = port.get()
 	b = baud.get()
 	ser = serial.Serial(p, b, timeout=1)
@@ -26,10 +26,11 @@ def setstop():
 def startThread():
 	global x,stop
 	stop = False
-	x = threading.Thread(target=timer,daemon=True)
+	x = threading.Thread(target=ReadSerial,daemon=True)
 	x.start()
 stop = False
 window = tk.Tk()
+window.title('Serial Monitoring')
 font1 = ('Arial Rounded MT Bold',50)
 font2 = ('Arial Rounded MT Bold',20)
 
