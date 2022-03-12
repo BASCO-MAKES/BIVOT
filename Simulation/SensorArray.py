@@ -1,4 +1,5 @@
 import pygame
+
 from transform import Transform
 
 
@@ -19,6 +20,8 @@ sensor2_img = pygame.image.load("./Images/Sensor.png")
 sensor1 = Transform((0,0),0,(1,1),sensor1_img)
 sensor2 = Transform((0,0),0,(1,1),sensor2_img)
 knob = Transform((0,0),0,(1,1),knob_img)
+
+pygame.make
 
 def Setup():
 
@@ -62,9 +65,9 @@ def CheckEvents():
 			global rectangle
 			rectangle.position = pygame.mouse.get_pos()
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			RotateObject(sensor1,45)
+			#RotateObject(sensor1,45)
 			print(sensor1.image.get_height())
-			DrawObject(sensor1)
+			#DrawObject(sensor1)
 		
 
 if __name__ == "__main__":
