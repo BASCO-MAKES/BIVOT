@@ -79,15 +79,12 @@ def function_calibration ():
     p09.value(1)
     print('Wait for CALB')
     # WAIT FOR CALB
-    i = 0
-    while i == 0:
-        if p04.value() == 0:  # Calibration button hit
-            i = 1
+    while p04.value() == 0:
+        pass # Calibration button hit
+    
     # WAIT FOR RELEASE
-    i=0
-    while i == 0:
-        if p04.value() == 1:  # Calibration button NOT pressed
-            i = 1
+    while p04.value() == 1:
+        pass # Calibration button NOT pressed
 
     # i2c.write_i2c('Calibration Button Pressed\n\r', 4)
 
@@ -130,15 +127,14 @@ def function_calibration ():
 
     # While loop waits for CALB button to be presses
     # WAIT FOR CALB
-    i = 0
-    while i == 0:
-        if p04.value() == 0:  # Calibration button hit
-            i = 1
+
+    while p04.value() == 0:
+        pass # Calibration button hit
     # WAIT FOR RELEASE
-    i = 0
-    while i == 0:
-        if p04.value() == 1:  # Calibration button NOT pressed
-            i = 1
+
+    while p04.value() == 1:
+        pass # Calibration button NOT pressed
+
 
     # Capture senor reading at CLOSED state
     H_CLOSED[0] = p01.value()  # Reads Sensor "H0"
