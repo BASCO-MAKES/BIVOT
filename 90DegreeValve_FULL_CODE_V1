@@ -79,11 +79,11 @@ def function_calibration ():
     p09.value(1)
     print('Wait for CALB')
     # WAIT FOR CALB
-    while p04.value() == 0:
+    while p04.value():
         pass # Calibration button hit
     
     # WAIT FOR RELEASE
-    while p04.value() == 1:
+    while p04.value():
         pass # Calibration button NOT pressed
 
     # i2c.write_i2c('Calibration Button Pressed\n\r', 4)
